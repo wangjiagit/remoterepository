@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dyne.maven.system.dao.RoleMapper">
+  <resultMap id="BaseResultMap" type="com.dyne.maven.system.po.Role">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="role_name" jdbcType="VARCHAR" property="roleName" />
+    <result column="role_code" jdbcType="VARCHAR" property="roleCode" />
+    <result column="role_description" jdbcType="VARCHAR" property="roleDescription" />
+    <collection property="permissions" ofType="com.dyne.maven.system.po.Permission">
+			<id column="id" jdbcType="BIGINT" property="id" />
+			<result column="permission_name" jdbcType="VARCHAR" property="permissionName" />
+            <result column="permission_code" jdbcType="VARCHAR" property="permissionCode" />
+            <result column="permission_description" jdbcType="VARCHAR" property="permissionDescription" />
+            <result column="moduleId" jdbcType="BIGINT" property="moduleid" />
+   </collection>
+  </resultMap>
+   <resultMap id="permissionResultMap" type="com.dyne.maven.system.po.Permission">
+      <id column="id" jdbcType="BIGINT" property="id" />
+   </resultMap>
+  <sql id="Base_Column_List">
+    id, role_name, role_code, role_description
+  </sql>
+  
+  <insert id="insertSelective" parameterType="com.dyne.maven.system.po.Role">
+    <selectKey keyProperty="id" order="BEFORE" resultType="java.lang.Long">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into role
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      id,
+      <if test="roleName != null">
+        role_name,
+      </if>
+      <if test="roleCode != null">
+        role_code,
+      </if>
+      <if test="roleDescription != null">
+        role_description,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      #{id,jdbcType=BIGINT},
+      <if test="roleName != null">
+        #{roleName,jdbcType=VARCHAR},
+      </if>
+      <if test="roleCode != null">
+        #{roleCode,jdbcType=VARCHAR},
+      </if>
+      <if test="roleDescription != null">
+        #{roleDescription,jdbcType=VARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.dyne.maven.system.po.Role">
+    update role
+    <set>
+      <if test="roleName != null">
+        role_name = #{roleName,jdbcType=VARCHAR},
+      </if>
+      <if test="roleCode != null">
+        role_code = #{roleCode,jdbcType=VARCHAR},
+      </if>
+      <if test="roleDescription != null">
+        role_description = #{roleDescription,jdbcType=VARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+<!--查询所有角色-->
+	<select id="selectRoleList"  resultMap="BaseResultMap">
+		select *
+		from role
+	</select>
+	
+<!-- 保存角色	 -->
+	<insert id="insert" parameterType="com.dyne.maven.system.po.Role">
+       insert into 
+         role (id, role_name, role_code, role_description)
+       values (#{id,jdbcType=BIGINT}, 
+       		  #{roleName,jdbcType=VARCHAR},
+       		  #{roleCode,jdbcType=VARCHAR}, 
+       		  #{roleDescription,jdbcType=VARCHAR})
+    </insert>
+
+<!-- 根据ID查询角色信息 -->
+    <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        select 
+           <include refid="Base_Column_List" />
+        from role
+         where id = #{id,jdbcType=BIGINT}
+    </select>
+
+<!-- 修改角色信息 -->
+   <update id="updateByPrimaryKey" parameterType="com.dyne.maven.system.po.Role">
+    update role
+    set role_name = #{roleName,jdbcType=VARCHAR},
+      role_code = #{roleCode,jdbcType=VARCHAR},
+      role_description = #{roleDescription,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+
+<!--批量删除角色-->
+	<delete id="deletelRoles" parameterType="java.util.Arrays">
+		delete from role
+		 where id IN
+		<foreach collection="array" item="item" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+<!--  批量删除当前角色下的权限然后批量添加 -->
+	<delete id="deletePermissionsByMap" parameterType="java.util.HashMap">
+		delete from mapping_role_permission
+		where roleId =#{roleId} AND 
+		      sys_permission_code IN (
+		      	select permission_code
+						from permission
+						where
+						id IN
+						<foreach collection="delIds" item="item" open="(" separator="," close=")">
+							#{item}
+			  			</foreach> )
+	</delete>
+	
+<!--  批量删除当前角色下的权限然后根据模块ID批量添加-->
+    <insert id="addPermissionsByMidMap" parameterType="java.util.HashMap" >
+        INSERT INTO mapping_role_permission (sys_permission_code,roleId)
+            select permission_code,#{roleId,jdbcType=BIGINT} from permission
+			where moduleId IN
+			 <foreach collection="addIds" item="item" index="index" open="(" close=")" separator=",">
+			     #{item,jdbcType=BIGINT}
+		     </foreach>
+    </insert>
+    
+ <!--  批量删除当前角色下的权限然后根据权限id批量添加-->
+    <insert id="addPermissionsByPidMap" parameterType="java.util.HashMap" >
+        INSERT INTO mapping_role_permission (sys_permission_code,roleId)
+            select permission_code,#{roleId,jdbcType=BIGINT} from permission
+			where id IN
+			 <foreach collection="addIds" item="item" index="index" open="(" close=")" separator=",">
+			     #{item,jdbcType=BIGINT}
+		     </foreach>
+    </insert>
+    
+  
+<!--根据id删除角色-->
+	<delete id="deleteByRoleId" parameterType="java.lang.Long">
+		delete from mapping_role_permission
+		where roleId = #{roleId,jdbcType=BIGINT}
+	</delete>
+	
+<!--根据角色id得到权限-->
+	<select id="getPermissionByRoleIds"  resultMap="permissionResultMap">
+		select
+		     id
+		  from
+		     permission
+		where moduleId in
+		<foreach collection="list" item="ids" index="index" open="(" close=")" separator=",">
+			#{ids}
+		</foreach>
+	</select>
+	
+<!--根据角色id添加所有权限 lsl-->
+	<insert id="insertPermissionByRoleIds" parameterType="com.dyne.maven.system.po.Role">
+			insert into mapping_role_permission (sys_permission_code,roleId)
+			select permission_code,#{id,jdbcType=BIGINT} from permission
+			where id IN
+			<foreach collection="permissions" item="ids" index="index" open="(" close=")" separator=",">
+				#{ids.id,jdbcType=BIGINT}
+			</foreach>
+	</insert>
+	
+<!--查询所有角色-->
+	<select id="selectAllRole"  resultMap="BaseResultMap">
+		select id,role_description,role_name,role_code
+		from role
+	</select>
+	
+</mapper>

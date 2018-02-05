@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dyne.maven.system.dao.UserMapper">
+  <resultMap id="BaseResultMap" type="com.dyne.maven.system.po.User">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="password" jdbcType="VARCHAR" property="password" />
+    <result column="user_name" jdbcType="VARCHAR" property="userName" />
+    <result column="sex" jdbcType="CHAR" property="sex" />
+    <result column="phone" jdbcType="VARCHAR" property="phone" />
+    <result column="photo" jdbcType="VARCHAR" property="photo" />
+    <result column="email" jdbcType="VARCHAR" property="email" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+  </resultMap>
+  <resultMap type="com.dyne.maven.system.po.User" id="UserAndRole" extends="BaseResultMap">
+  	<collection property="roles" select="findRolesByUserId"  column="id" ofType="com.dyne.maven.system.po.Role" > </collection>
+    <collection property="permissionCodes" select="findPCodesByUserId"  column="id" ofType="java.lang.String"></collection>
+    <collection property="modules" select="findModulesByUserId" column="id" ofType="com.dyne.maven.system.po.Module"> </collection>
+  </resultMap>
+  
+  <sql id="Base_Column_List">
+    id, name, password,user_name, sex, phone, photo, email, create_time
+  </sql>
+  
+<!--查询用户信息根据ID -->
+  <select id="findUserInfo" parameterType="java.lang.Long" resultMap="UserAndRole">
+     SELECT * 
+       FROM user
+      WHERE id = #{id,jdbcType=BIGINT}
+  </select>
+  
+<!--查询角色集合-->
+  <select id="findRolesByUserId" parameterType="java.lang.Long" resultType="com.dyne.maven.system.po.Role">
+    SELECT 
+        ru.roleId AS ID,
+	    r.role_name AS roleName,
+	    r.role_code AS roleCode
+  	  FROM role r 
+  	 INNER JOIN 
+  	    mapping_user_role ru 
+  	    ON r.id=ru.roleId
+    WHERE ru.userId = #{id,jdbcType=BIGINT} 
+  </select>
+  
+<!--   查询权限集合 lsl-->
+  <select id="findPCodesByUserId" parameterType="java.lang.Long" resultType="java.lang.String">
+    SELECT permission_code AS permissionCode
+		FROM permission permission
+		WHERE EXISTS (
+		 SELECT *
+		   FROM mapping_role_permission permissionMap  
+		  INNER JOIN mapping_user_role rolemap
+		     ON rolemap.roleId = permissionMap.roleId 
+		    AND rolemap.userId =  #{id,jdbcType=BIGINT}
+		WHERE  permissionMap.sys_permission_code = permission.permission_code )
+  </select>
+  
+<!--查询模块结合 lsl-->
+  <select id="findModulesByUserId" parameterType="java.lang.Long" resultType="com.dyne.maven.system.po.Module">
+      SELECT
+      	  m.id AS id, 
+      	  m.module_name as moduleName,
+      	  m.module_uri as moduleUri, 
+      	  m.module_baseId as moduleBaseid, 
+      	  m.module_code as moduleCode, 
+      	  m.orderBy
+       FROM module m WHERE 
+       EXISTS (
+            SELECT *
+              FROM mapping_user_role ru 
+             INNER JOIN mapping_role_permission rp 
+                ON ru.roleId=rp.roleId
+             INNER JOIN permission p 
+                ON rp.sys_permission_code = p.permission_code
+              WHERE m.id = p.moduleId AND ru.userId =  #{id,jdbcType=BIGINT}
+             )
+             ORDER BY m.orderBy     
+  </select>
+  
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from user
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from user
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  
+  <insert id="insert" parameterType="com.dyne.maven.system.po.User">
+    <selectKey keyProperty="id" order="BEFORE" resultType="java.lang.Long">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into user (id, name, user_name, 
+      sex, phone, photo, email, 
+      create_time)
+    values (#{id,jdbcType=BIGINT}, #{name,jdbcType=VARCHAR}, #{userName,jdbcType=VARCHAR}, 
+      #{sex,jdbcType=CHAR}, #{phone,jdbcType=VARCHAR}, #{photo,jdbcType=VARCHAR}, #{email,jdbcType=VARCHAR}, 
+      #{createTime,jdbcType=TIMESTAMP})
+  </insert>
+  
+  <insert id="insertSelective" parameterType="com.dyne.maven.system.po.User">
+    <selectKey keyProperty="id" order="BEFORE" resultType="java.lang.Long">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into user
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      id,
+      <if test="name != null">
+        name,
+      </if>
+      <if test="userName != null">
+        user_name,
+      </if>
+      <if test="sex != null">
+        sex,
+      </if>
+      <if test="phone != null">
+        phone,
+      </if>
+      <if test="photo != null">
+        photo,
+      </if>
+      <if test="email != null">
+        email,
+      </if>
+      <if test="createTime != null">
+        create_time,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      #{id,jdbcType=BIGINT},
+      <if test="name != null">
+        #{name,jdbcType=VARCHAR},
+      </if>
+      <if test="userName != null">
+        #{userName,jdbcType=VARCHAR},
+      </if>
+      <if test="sex != null">
+        #{sex,jdbcType=CHAR},
+      </if>
+      <if test="phone != null">
+        #{phone,jdbcType=VARCHAR},
+      </if>
+      <if test="photo != null">
+        #{photo,jdbcType=VARCHAR},
+      </if>
+      <if test="email != null">
+        #{email,jdbcType=VARCHAR},
+      </if>
+      <if test="createTime != null">
+        #{createTime,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  
+  <update id="updateByPrimaryKeySelective" parameterType="com.dyne.maven.system.po.User">
+    update user
+    <set>
+      <if test="name != null">
+        name = #{name,jdbcType=VARCHAR},
+      </if>
+      <if test="userName != null">
+        user_name = #{userName,jdbcType=VARCHAR},
+      </if>
+      <if test="sex != null">
+        sex = #{sex,jdbcType=CHAR},
+      </if>
+      <if test="phone != null">
+        phone = #{phone,jdbcType=VARCHAR},
+      </if>
+      <if test="photo != null">
+        photo = #{photo,jdbcType=VARCHAR},
+      </if>
+      <if test="email != null">
+        email = #{email,jdbcType=VARCHAR},
+      </if>
+      <if test="createTime != null">
+        create_time = #{createTime,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <update id="updateByPrimaryKey" parameterType="com.dyne.maven.system.po.User">
+    update user
+    set name = #{name,jdbcType=VARCHAR},
+      user_name = #{userName,jdbcType=VARCHAR},
+      sex = #{sex,jdbcType=CHAR},
+      phone = #{phone,jdbcType=VARCHAR},
+      photo = #{photo,jdbcType=VARCHAR},
+      email = #{email,jdbcType=VARCHAR},
+      create_time = #{createTime,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+<!-- 用户登录 -->
+  <select id="loginUser" parameterType="com.dyne.maven.system.po.User" resultMap="UserAndRole">
+      SELECT
+         *
+      FROM
+          user
+      WHERE
+          name = #{name}
+      AND
+          password = #{password}
+  </select>
+</mapper>

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dyne.maven.system.dao.PermissionMapper">
+  <resultMap id="BaseResultMap" type="com.dyne.maven.system.po.Permission">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="permission_name" jdbcType="VARCHAR" property="permissionName" />
+    <result column="permission_code" jdbcType="VARCHAR" property="permissionCode" />
+    <result column="permission_description" jdbcType="VARCHAR" property="permissionDescription" />
+    <result column="moduleId" jdbcType="BIGINT" property="moduleid" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, permission_name, permission_code, permission_description, moduleId
+  </sql>
+ 
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from permission
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  
+  <insert id="insert" parameterType="com.dyne.maven.system.po.Permission">
+    <selectKey keyProperty="id" order="BEFORE" resultType="java.lang.Long">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into permission (id, permission_name, permission_code, 
+      permission_description, moduleId)
+    values (#{id,jdbcType=BIGINT}, #{permissionName,jdbcType=VARCHAR}, #{permissionCode,jdbcType=VARCHAR}, 
+      #{permissionDescription,jdbcType=VARCHAR}, #{moduleid,jdbcType=BIGINT})
+  </insert>
+  <insert id="insertSelective" parameterType="com.dyne.maven.system.po.Permission">
+    <selectKey keyProperty="id" order="BEFORE" resultType="java.lang.Long">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into permission
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      id,
+      <if test="permissionName != null">
+        permission_name,
+      </if>
+      <if test="permissionCode != null">
+        permission_code,
+      </if>
+      <if test="permissionDescription != null">
+        permission_description,
+      </if>
+      <if test="moduleid != null">
+        moduleId,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      #{id,jdbcType=BIGINT},
+      <if test="permissionName != null">
+        #{permissionName,jdbcType=VARCHAR},
+      </if>
+      <if test="permissionCode != null">
+        #{permissionCode,jdbcType=VARCHAR},
+      </if>
+      <if test="permissionDescription != null">
+        #{permissionDescription,jdbcType=VARCHAR},
+      </if>
+      <if test="moduleid != null">
+        #{moduleid,jdbcType=BIGINT},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.dyne.maven.system.po.Permission">
+    update permission
+    <set>
+      <if test="permissionName != null">
+        permission_name = #{permissionName,jdbcType=VARCHAR},
+      </if>
+      <if test="permissionCode != null">
+        permission_code = #{permissionCode,jdbcType=VARCHAR},
+      </if>
+      <if test="permissionDescription != null">
+        permission_description = #{permissionDescription,jdbcType=VARCHAR},
+      </if>
+      <if test="moduleid != null">
+        moduleId = #{moduleid,jdbcType=BIGINT},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+<!-- 根据模块ID查询权限 -->
+   <select id="selectPermissonByModuleID" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+      from permission
+     where moduleId = #{id,jdbcType=BIGINT}
+  </select>
+  
+<!--添加权限-->
+  <insert id="addPermission" parameterType="com.dyne.maven.system.po.Permission" >
+    insert into permission
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="permissionName != null">
+        permission_name,
+      </if>
+      <if test="permissionCode != null">
+        permission_code,
+      </if>
+      <if test="permissionDescription != null">
+        permission_description,
+      </if>
+      <if test="moduleid != null">
+        moduleId,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="permissionName != null">
+        #{permissionName,jdbcType=VARCHAR},
+      </if>
+      <if test="permissionCode != null">
+        #{permissionCode,jdbcType=VARCHAR},
+      </if>
+      <if test="permissionDescription != null">
+        #{permissionDescription,jdbcType=VARCHAR},
+      </if>
+      <if test="moduleid != null">
+        #{moduleid,jdbcType=BIGINT}
+      </if>
+    </trim>
+  </insert>
+  
+<!-- 根据权限ID查询权限详细信息 -->
+   <select id="selectPermissionById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from permission
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  
+<!-- 根据ID批量删除-->
+  <delete id="deleteByIds" parameterType="java.util.Arrays" >
+    delete from permission
+    where
+    id in
+    <foreach collection="array" item="item" open="(" separator="," close=")">
+      #{item}
+    </foreach>
+  </delete>
+  
+<!--查看当前页面在此模块中拥有的权限 lsl-->
+  <select id="selectPermissonByModuleIDAndRoleId" parameterType="map" resultMap="BaseResultMap">
+      SELECT
+         t1.*
+      FROM permission t1
+      WHERE EXISTS(
+          SELECT
+                 t4.*
+            FROM role t2
+            LEFT JOIN mapping_role_permission t3
+              ON t2.id = t3.roleId
+            LEFT JOIN permission t4
+              ON t4.permission_code = t3.sys_permission_code
+           WHERE t1.id = t4.id
+             AND t2.id =#{roleId} AND t4.moduleId=#{moduleId})
+  </select>
+ 
+  
+<!--伪分页查询当前模块下的权限-->
+  <select id="selectByPermissionModuleIdList" parameterType="java.util.Map" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from permission
+    where moduleId = #{moduleId,jdbcType=BIGINT}
+  </select>
+  
+<!-- 修改权限 -->
+    <update id="updatePermission" parameterType="com.dyne.maven.system.po.Permission">
+    update permission
+    set permission_name = #{permissionName,jdbcType=VARCHAR},
+      permission_code = #{permissionCode,jdbcType=VARCHAR},
+      permission_description = #{permissionDescription,jdbcType=VARCHAR},
+      moduleId = #{moduleid,jdbcType=BIGINT}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>

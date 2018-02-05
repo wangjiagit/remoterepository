@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+	<bean id="testJobTask" class="com.dyne.maven.quartz.TestTask" />
+	<!-- job的配置开始 -->
+	<bean id="testJob"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject">
+			<ref bean="testJobTask" />
+		</property>
+		<property name="targetMethod">
+			<value>testJob</value>
+		</property>
+	</bean>
+	<!-- job的配置结束 -->
+	<!-- 工作的bean -->
+	<!-- quartz-2.x的配置 -->
+	<bean id="testTaskTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+
+		<property name="jobDetail">
+			<ref bean="testJob" />
+		</property>
+
+		<property name="cronExpression">
+			<value>0 * * * * ?</value>
+		</property>
+	</bean>
+	<!-- 启动触发器的配置开始 -->
+	<!-- <bean name="startQuertz" lazy-init="false" autowire="no" class="org.springframework.scheduling.quartz.SchedulerFactoryBean"> 
+		<property name="triggers"> <list> <ref bean="sendSmsTrigger" /> </list> </property> 
+		</bean> -->
+</beans>

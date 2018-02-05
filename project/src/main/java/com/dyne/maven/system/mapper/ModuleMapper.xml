@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dyne.maven.system.dao.ModuleMapper">
+  <resultMap id="BaseResultMap" type="com.dyne.maven.system.po.Module">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="module_name" jdbcType="VARCHAR" property="moduleName" />
+    <result column="module_uri" jdbcType="VARCHAR" property="moduleUri" />
+    <result column="module_baseId" jdbcType="BIGINT" property="moduleBaseid" />
+    <result column="module_code" jdbcType="VARCHAR" property="moduleCode" />
+    <result column="orderBy" jdbcType="BIGINT" property="orderby" />
+    <result column="module_description" jdbcType="VARCHAR" property="moduleDescription" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, module_name, module_uri, module_baseId, module_code, orderBy, module_description
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from module
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+
+  <insert id="insertSelective" parameterType="com.dyne.maven.system.po.Module">
+    <selectKey keyProperty="id" order="BEFORE" resultType="java.lang.Long">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into module
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      id,
+      <if test="moduleName != null">
+        module_name,
+      </if>
+      <if test="moduleUri != null">
+        module_uri,
+      </if>
+      <if test="moduleBaseid != null">
+        module_baseId,
+      </if>
+      <if test="moduleCode != null">
+        module_code,
+      </if>
+      <if test="orderby != null">
+        orderBy,
+      </if>
+      <if test="moduleDescription != null">
+        module_description,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      #{id,jdbcType=BIGINT},
+      <if test="moduleName != null">
+        #{moduleName,jdbcType=VARCHAR},
+      </if>
+      <if test="moduleUri != null">
+        #{moduleUri,jdbcType=VARCHAR},
+      </if>
+      <if test="moduleBaseid != null">
+        #{moduleBaseid,jdbcType=BIGINT},
+      </if>
+      <if test="moduleCode != null">
+        #{moduleCode,jdbcType=VARCHAR},
+      </if>
+      <if test="orderby != null">
+        #{orderby,jdbcType=BIGINT},
+      </if>
+      <if test="moduleDescription != null">
+        #{moduleDescription,jdbcType=VARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.dyne.maven.system.po.Module">
+    update module
+    <set>
+      <if test="moduleName != null">
+        module_name = #{moduleName,jdbcType=VARCHAR},
+      </if>
+      <if test="moduleUri != null">
+        module_uri = #{moduleUri,jdbcType=VARCHAR},
+      </if>
+      <if test="moduleBaseid != null">
+        module_baseId = #{moduleBaseid,jdbcType=BIGINT},
+      </if>
+      <if test="moduleCode != null">
+        module_code = #{moduleCode,jdbcType=VARCHAR},
+      </if>
+      <if test="orderby != null">
+        orderBy = #{orderby,jdbcType=BIGINT},
+      </if>
+      <if test="moduleDescription != null">
+        module_description = #{moduleDescription,jdbcType=VARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+<!--  根据id修改模块  -->
+  <update id="updateByPrimaryKey" parameterType="com.dyne.maven.system.po.Module">
+    update module
+    set module_name = #{moduleName,jdbcType=VARCHAR},
+      module_uri = #{moduleUri,jdbcType=VARCHAR},
+      module_baseId = #{moduleBaseid,jdbcType=BIGINT},
+      module_code = #{moduleCode,jdbcType=VARCHAR},
+      orderBy = #{orderby,jdbcType=BIGINT},
+      module_description = #{moduleDescription,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+<!--根据人员查询菜单 lsl-->
+    <select id="selectMenuByUser" resultMap="BaseResultMap" parameterType="com.dyne.maven.system.po.User">
+      SELECT
+       <include refid="Base_Column_List" />
+        FROM module t
+        WHERE EXISTS
+        (SELECT
+               t1.*
+           FROM
+               permission t1
+      LEFT JOIN mapping_role_permission t2
+             ON t1.`permission_code` = t2.sys_permission_code
+      LEFT JOIN mapping_user_role t4
+             ON t2.roleId = t4.roleId
+          WHERE t4.userId = #{id,jdbcType=BIGINT}
+            AND t1.moduleId = t.id)
+        ORDER BY t.orderBy
+    </select>
+
+    
+<!--获取当前角色下的模块以及查询全部模块 lsl-->
+    <select id="getRoleModule" parameterType="java.lang.Long" resultType="HashMap">
+     SELECT  module.id AS id, module.`module_baseId` AS pId, module.`module_name` AS name,
+	   CASE WHEN ISNULL(role_model.`id`) THEN 'false'  ELSE 'true' END AS checked 
+	   FROM module module 
+	   LEFT JOIN  (SELECT mo.`id`  FROM  module mo 
+      		 WHERE EXISTS 
+         		 (SELECT  p.moduleId 
+         		    FROM mapping_role_permission rolep 
+                   INNER JOIN permission p 
+                      ON rolep.sys_permission_code = p.permission_code 
+                   WHERE mo.`id` = p.`moduleId` 
+                     AND rolep.roleId = #{id,jdbcType=BIGINT} )) role_model 
+             ON module.`id` = role_model.`id` 
+             ORDER BY module.`orderBy` 
+    </select>
+    
+<!--根据id查询模块-->
+    <select id="selectModuleById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from module
+        where id = #{id,jdbcType=BIGINT} 
+    </select>
+    
+<!--查询所有的模块（菜单树）-->
+    <select id="selectAllModule" resultType="HashMap">
+        select
+        id AS id,
+        module_name AS name,
+        module_baseId AS pId
+        from module order by orderBy
+    </select>
+    
+<!-- 根据ID删除模块 --> 
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from module
+    where id = #{id,jdbcType=BIGINT}
+    or module_baseId = #{id,jdbcType=BIGINT}
+  </delete>
+  
+<!-- 添加模块 -->
+  <insert id="insert" parameterType="com.dyne.maven.system.po.Module">
+    insert into module (id, module_name, module_uri, 
+      module_baseId, module_code, orderBy, 
+      module_description)
+    values (#{id,jdbcType=BIGINT}, #{moduleName,jdbcType=VARCHAR}, #{moduleUri,jdbcType=VARCHAR}, 
+      #{moduleBaseid,jdbcType=BIGINT}, #{moduleCode,jdbcType=VARCHAR}, #{orderby,jdbcType=BIGINT}, 
+      #{moduleDescription,jdbcType=VARCHAR})
+  </insert>
+  
+<!--根据id修改父节点-->
+   <update id="updateBaseIdByPrimaryKey" parameterType="com.dyne.maven.system.po.Module">
+       update module
+       set module_baseId = #{moduleBaseid,jdbcType=VARCHAR}
+       where id = #{id,jdbcType=BIGINT}
+   </update>
+   
+</mapper>
